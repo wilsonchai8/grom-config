@@ -25,8 +25,7 @@ async def render_general(general_content, env_id, is_render=True):
                 content = line
                 comment = ''
             for item in re.findall(pattern, content):
-                env, name, key = item.split('.', 2)
-                res = await get_public_item(key, env_id)
+                res = await get_public_item(item, env_id)
                 value = res['v'] if res else ''
                 content = content.replace('<<<{}>>>'.format(item), value)
             temp_list.append('{}{}'.format(content, comment))
