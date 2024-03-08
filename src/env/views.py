@@ -12,6 +12,7 @@ __all__ = (
 class EnvAdd(ConfigMetaClass):
     name = NonBlank('name')
     prefix = MustString('prefix')
+    comment = MustString('comment')
     notification = MustString('notification')
     notification_token = MustString('notification_token')
     callback_token = MustString('callback_token')
@@ -20,6 +21,7 @@ class EnvAdd(ConfigMetaClass):
     def __init__(self, *args, **kwargs) -> None:
         self.name = kwargs.get('name')
         self.prefix = kwargs.get('prefix')
+        self.comment = kwargs.get('comment')
         self.notification = kwargs.get('notification')
         self.notification_token = kwargs.get('notification_token')
         self.callback_token = kwargs.get('callback_token')
@@ -62,9 +64,9 @@ class Env:
         user = kwargs.get('user')
         now = datetime.now()
 
-        add_env_sql = "insert into env(name, prefix, notification, notification_token, is_callback, callback_token, update_time, modifier)" \
-                    "values(%s, %s, %s, %s, %s, %s, %s, %s)"
-        add_env_condition = (ea.name, ea.prefix, ea.notification, ea.notification_token, 
+        add_env_sql = "insert into env(name, prefix, comment, notification, notification_token, is_callback, callback_token, update_time, modifier)" \
+                    "values(%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        add_env_condition = (ea.name, ea.prefix, ea.comment, ea.notification, ea.notification_token, 
                              ea.is_callback, ea.callback_token, now, user)
         await self.mp.dml(add_env_sql, add_env_condition)
 
@@ -98,9 +100,9 @@ class Env:
         user = kwargs.get('user')
         now = datetime.now()
 
-        sql = "update env set name=%s, prefix=%s, notification=%s, notification_token=%s, is_callback=%s, " \
+        sql = "update env set name=%s, prefix=%s, comment=%s, notification=%s, notification_token=%s, is_callback=%s, " \
                 "callback_token=%s, update_time=%s, modifier=%s where id=%s"
-        condition = (eu.name, eu.prefix, eu.notification, eu.notification_token, 
+        condition = (eu.name, eu.prefix, eu.comment, eu.notification, eu.notification_token, 
                      eu.is_callback, eu.callback_token, now, user, eu.id)
         await self.mp.dml(sql, condition)
 
