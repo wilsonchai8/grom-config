@@ -120,7 +120,7 @@ class General:
                 "and belongto like CONCAT('%%', %s, '%%') " \
                 "and is_delete in %s) g where g.env_id = e.id"
             counts_res = await self.mp.dml(counts_sql, cond)
-            general_list_sql = "select g.*, e.name as env, e.prefix from " \
+            general_list_sql = "select g.*, e.name as env, e.prefix, e.comment as comment from " \
                 "(select * from env " \
                 "where name like CONCAT('%%', %s, '%%') " \
                 "and prefix like CONCAT('%%', %s, '%%')) e," \
