@@ -203,34 +203,6 @@ class General:
 
     async def publish(self, **kwargs):
         await publish_flow(**kwargs)
-        #
-        # to_publish_version_sql = "select gv.id, gv.general_id, gv.name, gv.content, gv.status, " \
-        #                     "e.id env_id, e.name env, e.prefix, e.notification, e.notification_token, e.is_callback, e.callback_token " \
-        #                     "from general g, general_version gv, env e " \
-        #                     "where gv.general_id = g.id and g.env_id = e.id and gv.id = %s order by gv.update_time desc limit 1 "
-        # to_publish_version_info = await self.mp.dml(to_publish_version_sql, (gp.version_id,))
-        #
-        # cs = ConfigStatus(to_publish_version_info['status'])
-        # cs.switch('publishing')
-        #
-        # await self.mp.dml(
-        #     "update general_version set status = %s, publish_time = %s, publisher = %s where id = %s and status in ('modified', 'publish_failed')",
-        #     (cs.state, now, user, gp.version_id)
-        # )
-        #
-        # await add_general_version_log(
-        #     general_id=gp.general_id,
-        #     version_id=to_publish_version_info['id'],
-        #     status=cs.state,
-        #     name='{} {}'.format(to_publish_version_info['name'], states_to_name[cs.state]),
-        #     info='',
-        #     user=user,
-        #     update_time=now
-        # )
-        #
-        # await self.notification(to_publish_version_info, cs, user)
-        # await self.need_callback(to_publish_version_info, cs, user)
-
 
     async def rollback(self, **kwargs):
         gr = GeneralRollback(**kwargs)
@@ -291,104 +263,6 @@ class General:
         }
         await notification(to_rollback_version_info, rollback_cs, user, is_rollback=True, **payload)
         await need_callback(to_rollback_version_info, rollback_cs, user, is_rollback=True, **payload)
-
-    # async def notification(self, general_info, cs, user, is_rollback=False, **kwargs):
-    #     now = datetime.now()
-    #     notification_addr = general_info['notification']
-    #     if notification_addr:
-    #         timeout_config = int(get_conf()['runtime']['notification_timeout'])
-    #         callback_url_config = get_conf()['runtime']['callback_url']
-    #         try:
-    #             timeout = aiohttp.ClientTimeout(total=timeout_config)
-    #             async with aiohttp.ClientSession(timeout=timeout) as session:
-    #                 payload = {
-    #                     'callback_url': callback_url_config,
-    #                     'callback_token': general_info['callback_token'],
-    #                     'general_id': general_info['general_id'],
-    #                     'version_id': general_info['id'],
-    #                     'version': general_info['name'],
-    #                     'content': await render_general(general_info['content'], general_info['env_id']),
-    #                     'env': general_info['env'],
-    #                     'prefix': general_info['prefix'],
-    #                     'action': 'publish' if not is_rollback else 'rollback',
-    #                 }
-    #                 if is_rollback:
-    #                     rollback_general_info = kwargs['current_general_info']
-    #                     payload['current_general_info'] = {
-    #                         'general_id': rollback_general_info['general_id'],
-    #                         'version_id': rollback_general_info['id'],
-    #                         'version': rollback_general_info['name'],
-    #                     }
-    #                 async with session.post(notification_addr, json=payload) as response:
-    #                     if response.status != 200:
-    #                         res_json = await response.text()
-    #                         raise RuntimeError(res_json)
-    #         except Exception as e:
-    #             msg = '{} ---- {} {}'.format(notification_addr, e.__class__.__name__, e.args)
-    #             title = '{} {}'.format(general_info['name'], states_to_name[cs.state]),
-    #             cs.switch('publish_failed')
-    #             status = cs.state
-    #
-    #             await self.mp.dml(
-    #                 "update general_version set status = %s, publisher = %s where id = %s ",
-    #                 (cs.state, user, general_info['id'])
-    #             )
-    #
-    #             if is_rollback:
-    #                 current_cs = kwargs['current_cs']
-    #                 current_general_info = kwargs['current_general_info']
-    #                 current_cs.switch('rollback_failed')
-    #                 status = current_cs.state
-    #                 await self.mp.dml(
-    #                     "update general_version set status = %s, publisher = %s where id = %s",
-    #                     (current_cs.state, user, current_general_info['id'])
-    #                 )
-    #                 title = '{} 回滚到 {} 回滚失败'.format(current_general_info['name'], general_info['name'])
-    #
-    #             await add_general_version_log(
-    #                 general_id=general_info['general_id'],
-    #                 version_id=general_info['id'],
-    #                 status=status,
-    #                 name=title,
-    #                 info=msg,
-    #                 user=user,
-    #                 update_time=now
-    #             )
-    #
-    #             raise RunError(msg=msg)
-    #
-    # async def need_callback(self, general_info, cs, user, is_rollback=False, **kwargs):
-    #     now = datetime.now()
-    #     is_callback = general_info['is_callback']
-    #     status = cs.state
-    #     title = '{} {}'.format(general_info['name'], states_to_name[cs.state]),
-    #     if not is_callback:
-    #         cs.switch('published')
-    #         await self.mp.dml(
-    #             "update general_version set status = %s, publish_time = %s, update_time = %s, publisher = %s where id = %s ",
-    #             (cs.state, now, now, user, general_info['id'])
-    #         )
-    #
-    #         if is_rollback:
-    #             current_cs = kwargs['current_cs']
-    #             current_general_info = kwargs['current_general_info']
-    #             current_cs.switch('rollbacked')
-    #             status = current_cs.state
-    #             await self.mp.dml(
-    #                 "update general_version set status = %s, publisher = %s where id = %s",
-    #                 (current_cs.state, user, current_general_info['id'])
-    #             )
-    #             title = '{} 回滚到 {} 回滚成功'.format(current_general_info['name'], general_info['name'])
-    #
-    #         await add_general_version_log(
-    #             general_id=general_info['general_id'],
-    #             version_id=general_info['id'],
-    #             status=status,
-    #             name=title,
-    #             info='',
-    #             user=user,
-    #             update_time=now
-    #         )
 
     async def list_general_version_log(self, **kwargs):
         ret = {

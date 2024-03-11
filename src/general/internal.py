@@ -117,7 +117,7 @@ async def notification(general_info, cs, user, is_rollback=False, **kwargs):
                         raise RuntimeError(res_json)
         except Exception as e:
             msg = '{} ---- {} {}'.format(notification_addr, e.__class__.__name__, e.args)
-            title = '{} {}'.format(general_info['name'], states_to_name[cs.state]),
+            title = '{} {}'.format(general_info['name'], states_to_name[cs.state])
             cs.switch('publish_failed')
             status = cs.state
 
@@ -154,10 +154,10 @@ async def need_callback(general_info, cs, user, is_rollback=False, **kwargs):
     mp = MysqlPool(loop)
     now = datetime.now()
     is_callback = general_info['is_callback']
-    status = cs.state
-    title = '{} {}'.format(general_info['name'], states_to_name[cs.state]),
     if not is_callback:
         cs.switch('published')
+        status = cs.state
+        title = '{} {}'.format(general_info['name'], states_to_name[cs.state])
         await mp.dml(
             "update general_version set status = %s, publish_time = %s, update_time = %s, publisher = %s where id = %s ",
             (cs.state, now, now, user, general_info['id'])
