@@ -90,9 +90,15 @@ async def notification(general_info, cs, user, is_rollback=False, **kwargs):
     if notification_addr:
         timeout_config = int(get_conf()['runtime']['notification_timeout'])
         callback_url_config = get_conf()['runtime']['callback_url']
+        send_token = general_info['notification_token']
         try:
             timeout = aiohttp.ClientTimeout(total=timeout_config)
             async with aiohttp.ClientSession(timeout=timeout) as session:
+                headers = {
+                    "Authorization": "Bearer {}".format(send_token),
+                    "Content-Type": "application/json",
+                }
+
                 payload = {
                     'callback_url': callback_url_config,
                     'callback_token': general_info['callback_token'],
@@ -111,14 +117,14 @@ async def notification(general_info, cs, user, is_rollback=False, **kwargs):
                         'version_id': rollback_general_info['id'],
                         'version': rollback_general_info['name'],
                     }
-                async with session.post(notification_addr, json=payload) as response:
+                async with session.post(notification_addr, headers=headers, json=payload) as response:
                     if response.status != 200:
                         res_json = await response.text()
                         raise RuntimeError(res_json)
         except Exception as e:
+            cs.switch('publish_failed')
             msg = '{} ---- {} {}'.format(notification_addr, e.__class__.__name__, e.args)
             title = '{} {}'.format(general_info['name'], states_to_name[cs.state])
-            cs.switch('publish_failed')
             status = cs.state
 
             await mp.dml(

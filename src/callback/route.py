@@ -36,14 +36,12 @@ class CallbackHandler(WebHandler):
 class TempHandler(WebHandler):
 
     async def post(self, *args, **kwargs):
+        from src.common.log_handler import logger
         body = self.get_request_body_json()
-        print('!!!!!!!!!!!!!!', body)
+        # print('!!!!!!!!!!!!!!', body)
         # body['user'] = self.current_user
         # await env.add(**body)
         self.reply()
-
-    def prepare(self):
-        pass
 
 callback_urls = [
     (r'/callback', CallbackHandler),
