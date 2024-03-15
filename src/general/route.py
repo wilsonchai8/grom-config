@@ -79,6 +79,15 @@ class GeneralPublishHandler(WebHandler):
         self.reply()
 
 
+class GeneralPublishStopHandler(WebHandler):
+    async def post(self, *args, **kwargs):
+        body = self.get_request_body_json()
+        body['user'] = self.current_user
+        general = General()
+        await general.publish_stop(**body)
+        self.reply()
+
+
 class GeneralAbandonHandler(WebHandler):
     async def post(self, *args, **kwargs):
         body = self.get_request_body_json()
@@ -96,13 +105,25 @@ class GeneralRollbackHandler(WebHandler):
         await general.rollback(**body)
         self.reply()
 
+
+class GeneralRollbackStopHandler(WebHandler):
+    async def post(self, *args, **kwargs):
+        body = self.get_request_body_json()
+        body['user'] = self.current_user
+        general = General()
+        await general.rollback_stop(**body)
+        self.reply()
+
+
 general_urls = [
     (r'/general', GeneralHandler),
     (r'/general/status', GeneralStatusHandler),
     (r'/general/render', GeneralRenderHandler),
     (r'/general/abandon', GeneralAbandonHandler),
     (r'/general/publish', GeneralPublishHandler),
+    (r'/general/publishstop', GeneralPublishStopHandler),
     (r'/general/rollback', GeneralRollbackHandler),
+    (r'/general/rollbackstop', GeneralRollbackStopHandler),
     (r'/generalversion', GeneralVersionHandler),
     (r'/generallog', GeneralVersionLogPublishHandler),
 ]

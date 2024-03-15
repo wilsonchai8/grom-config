@@ -204,6 +204,39 @@ class General:
     async def publish(self, **kwargs):
         await publish_flow(**kwargs)
 
+    async def publish_stop(self, **kwargs):
+        gps = GeneralPublish(**kwargs)
+        user = kwargs.get('user')
+        now = datetime.now()
+        await GeneralCheck.general_not_found(general_id=gps.general_id)
+
+
+        to_publish_version_sql = "select gv.id, gv.general_id, gv.name, gv.content, gv.status, gv.publisher, " \
+                            "e.id env_id, e.name env, e.prefix, e.notification, e.notification_token, e.is_callback, e.callback_token " \
+                            "from general g, general_version gv, env e " \
+                            "where gv.general_id = g.id and g.env_id = e.id and gv.id = %s order by gv.update_time desc limit 1 "
+        to_publish_version_info = await self.mp.dml(to_publish_version_sql, (gps.version_id,))
+        current_status = to_publish_version_info['status']
+        if current_status != 'publishing':
+            raise RunError(msg='当前版本不在发布状态，不能终止')
+        cs = ConfigStatus(current_status)
+        cs.switch('publish_failed')
+
+        await self.mp.dml(
+            "update general_version set status = %s, publisher = %s, modifier = %s where id = %s",
+            (cs.state, user, user, gps.version_id)
+        )
+
+        await add_general_version_log(
+            general_id=gps.general_id,
+            version_id=gps.version_id,
+            name='{} 终止发布'.format(to_publish_version_info['name']),
+            status=cs.state,
+            info='{} 开始发布，{} 终止发布'.format(to_publish_version_info['publisher'], user),
+            user=user,
+            update_time=now
+        )
+
     async def rollback(self, **kwargs):
         gr = GeneralRollback(**kwargs)
         await GeneralCheck.general_not_found(general_id=gr.general_id)
@@ -263,6 +296,56 @@ class General:
         }
         await notification(to_rollback_version_info, rollback_cs, user, is_rollback=True, **payload)
         await need_callback(to_rollback_version_info, rollback_cs, user, is_rollback=True, **payload)
+
+    async def rollback_stop(self, **kwargs):
+        gr = GeneralRollback(**kwargs)
+        user = kwargs.get('user')
+        now = datetime.now()
+        await GeneralCheck.general_not_found(general_id=gr.general_id)
+
+        previous_to_publish_version_sql = "select gv.id, gv.general_id, gv.name, gv.content, gv.status, gv.publisher, " \
+                            "e.id env_id, e.name env, e.prefix, e.notification, e.notification_token, e.is_callback, e.callback_token " \
+                            "from general g, general_version gv, env e " \
+                            "where gv.general_id = g.id and g.env_id = e.id and gv.id = %s order by gv.update_time desc limit 1 "
+        previous_to_publish_version_info= await self.mp.dml(previous_to_publish_version_sql, (gr.version_id,))
+        current_need_rollback_version_info = await self.mp.dml(
+            "select * from general_version where general_id = %s order by update_time desc limit 1 ",
+            (gr.general_id,)
+            )
+
+        previous_need_publish_cs = ConfigStatus(previous_to_publish_version_info['status'])
+        previous_need_publish_cs.switch('publish_failed')
+        current_need_rollback_cs = ConfigStatus(current_need_rollback_version_info['status'])
+        current_need_rollback_cs.switch('rollback_failed')
+
+        async with self.mp.pool.acquire() as conn:
+            cur = await conn.cursor() 
+            try:
+                sql = "update general_version set status = %s, publisher = %s, modifier = %s where id = %s"
+                await cur.execute(
+                    sql,
+                    (previous_need_publish_cs.state, user, user, previous_to_publish_version_info['id'])
+                )
+                await cur.execute(
+                    sql,
+                    (current_need_rollback_cs.state, user, user, current_need_rollback_version_info['id'])
+                    )
+
+                await conn.commit()
+            except Exception as e:
+                await conn.rollback()
+                raise(e)
+
+        await add_general_version_log(
+            general_id=gr.general_id,
+            version_id=current_need_rollback_version_info['id'],
+            name='{} 回滚到 {}，终止回滚'.format(current_need_rollback_version_info['name'], previous_to_publish_version_info['name']),
+            status=current_need_rollback_cs.state,
+            info='{} 开始回滚，{} 终止回滚'.format(previous_to_publish_version_info['publisher'], user),
+            user=user,
+            update_time=now
+        )
+
 
     async def list_general_version_log(self, **kwargs):
         ret = {

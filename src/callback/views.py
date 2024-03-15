@@ -28,7 +28,6 @@ class Callback:
             'code': 0,
             'msg': 'success'
         }
-        user = 'callback'
         gcb = GeneralCallback(**kwargs)
         if not gcb.payload:
             raise RunError(msg='payload is None')
@@ -38,6 +37,7 @@ class Callback:
             "select * from general_version where id = %s",
             (gcb.payload['version_id'],)
         )
+        user = general_info['modifier']
         cs = ConfigStatus(general_info['status'])
         target_status = 'published' if gcb.code == 0 else 'publish_failed'
         cs.switch(target_status)
