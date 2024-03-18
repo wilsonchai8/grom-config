@@ -65,8 +65,8 @@ async def publish_flow(**kwargs):
     cs.switch('publishing')
 
     await mp.dml(
-        "update general_version set status = %s, publish_time = %s, publisher = %s where id = %s",
-        (cs.state, now, user, gp.version_id)
+        "update general_version set status = %s, publish_time = %s, publisher = %s, is_publish = %s where id = %s",
+        (cs.state, now, user, True, gp.version_id)
     )
 
     await add_general_version_log(
