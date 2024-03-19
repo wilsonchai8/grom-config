@@ -47,8 +47,8 @@ class Callback:
             now = datetime.now()
             title = '{} {}'.format(general_info['name'], states_to_name[status])
             await self.mp.dml(
-                "update general_version set status = %s, publish_time = %s, publisher = %s, status = %s where id = %s ",
-                (status, now, user, status, general_info['id'])
+                "update general_version set status = %s, publish_time = %s, publisher = %s, status = %s, is_publish = %s where id = %s ",
+                (status, now, user, status, True, general_info['id'])
             )
         else:
             current_general_info = await self.mp.dml(

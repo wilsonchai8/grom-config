@@ -65,8 +65,8 @@ async def publish_flow(**kwargs):
     cs.switch('publishing')
 
     await mp.dml(
-        "update general_version set status = %s, publish_time = %s, publisher = %s, is_publish = %s where id = %s",
-        (cs.state, now, user, True, gp.version_id)
+        "update general_version set status = %s, publish_time = %s, publisher = %s where id = %s",
+        (cs.state, now, user, gp.version_id)
     )
 
     await add_general_version_log(
@@ -165,8 +165,8 @@ async def need_callback(general_info, cs, user, is_rollback=False, **kwargs):
         status = cs.state
         title = '{} {}'.format(general_info['name'], states_to_name[cs.state])
         await mp.dml(
-            "update general_version set status = %s, publish_time = %s, update_time = %s, publisher = %s where id = %s ",
-            (cs.state, now, now, user, general_info['id'])
+            "update general_version set status = %s, publish_time = %s, update_time = %s, publisher = %s, is_publish = %s where id = %s ",
+            (cs.state, now, now, user, True, general_info['id'])
         )
 
         if is_rollback:
