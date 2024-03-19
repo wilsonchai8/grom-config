@@ -192,7 +192,7 @@ class PublicItem:
         related_sql = "select * from (select t1.* from " \
             "(select g.name, g.belongto, gv.id version_id, gv.general_id, gv.name version, gv.content, gv.status, gv.publish_time, gv.update_time, e.name env, e.prefix " \
             "from general g, general_version gv, env e " \
-            "where g.id = gv.general_id and e.id = g.env_id) t1 " \
+            "where g.id = gv.general_id and e.id = g.env_id and e.id = %s) t1 " \
             "left join (select general_id, max(update_time) update_time from general_version group by general_id) t2 " \
             "on t1.general_id = t2.general_id and t1.update_time < t2.update_time " \
             "where t1.content like CONCAT('%%', %s, '%%') and t2.general_id is null) a " \
@@ -200,7 +200,7 @@ class PublicItem:
             "from public_item_version_record where public_item_version_id = %s) b on a.version_id = b.general_version_id"
         related_general_info = await self.mp.dml(
             related_sql,
-            (pvr.k, pvr.public_item_version_id),
+            (pvr.env_id, pvr.k, pvr.public_item_version_id),
             all=True
         )
         for piece in related_general_info:
@@ -259,7 +259,7 @@ class PublicItem:
 
             try:
                 await _writeback(
-                    ob['version_idaaa'],
+                    ob['version_id'],
                     error_message
                 )
             except Exception:
